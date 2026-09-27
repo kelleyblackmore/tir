@@ -13,6 +13,8 @@ Tir is a Armenian god of wisdom and the namesake of the TIR (Test Ingest Resposi
 - Store Quarterly DISA STIG libraries.
 - Streamline Quarterly STIG Update Process
 - Import automated test tool results
+  - STIG checklists (`.ckl`, `.cklb`), XCCDF (`.xml`) and Nessus (`.nessus`)
+  - Container / filesystem CVE scans: Trivy (`trivy image -f json`) and Grype (`grype -o json`) as `.json`
 - Export compliance data
 
 ## Dev Setup
@@ -64,6 +66,12 @@ DATABASE_NAME= # Required: Database Name for TIR
 
 ```bash
 npm run dbinit
+```
+
+## Run tests
+
+```bash
+npm test
 ```
 
 ## Start local server

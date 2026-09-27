@@ -7,7 +7,7 @@ import {
   type InferCreationAttributes,
   type CreationOptional,
 } from "sequelize";
-import { NessusPlugin, System } from "~/db/models";
+import { NessusPlugin, ScanFinding, System } from "~/db/models";
 
 //   const cvss3VectorMappings: { [key: string]: keyof Cve } = {
 //     CVSS: "cvss3Version",
@@ -93,6 +93,7 @@ export class Cve extends Model<InferAttributes<Cve>, InferCreationAttributes<Cve
 
   declare addSystem: BelongsToManyAddAssociationMixin<System, number>;
   declare addNessusPlugin: BelongsToManyAddAssociationMixin<NessusPlugin, number>;
+  declare addScanFinding: BelongsToManyAddAssociationMixin<ScanFinding, number>;
 
   // updateByCvss3Vector(cvss3String: string) {
   //   const cvss3VectorParts = cvss3String.split("/");

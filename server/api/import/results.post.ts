@@ -10,6 +10,8 @@ import { importXccdf } from "../../utils/xccdf";
 import { System, Boundary, Boundary_User } from "../../../db/models";
 import { ChecklistV3 } from "../../utils/checklist_v3";
 import { importNessus, NessusMatch } from "~/server/utils/nessus";
+import { parseScanFile } from "~/server/utils/scanParsers";
+import { importScan, type ScanImportResult } from "~/server/utils/scanImport";
 
 export default defineEventHandler(async (event) => {
   const body = await proccessNodeRequest(event.node.req);
@@ -34,11 +36,13 @@ export default defineEventHandler(async (event) => {
 
       const uploadedFiles = body.files;
       const dirList: string[] = [];
+      const scans: ScanImportResult[] = [];
+      const unrecognized: string[] = [];
 
       for (let i = 0; i < uploadedFiles.length; i++) {
         let fileList: string[];
 
-        const newFileName = path.join(config.temp_folder, uploadedFiles[i].originalFilename);
+        const newFileName = safeTempPath(config.temp_folder, uploadedFiles[i].originalFilename);
         const newDir = path.dirname(newFileName);
         if (!fs.existsSync(newDir)) {
           fs.mkdirSync(newDir, { recursive: true });
@@ -89,6 +93,22 @@ export default defineEventHandler(async (event) => {
             await importChecklistV3(checklistData, systemId);
           }
 
+          if (path.extname(baseFilename) === ".json") {
+            const scan = parseScanFile(fileData);
+            if (!scan) {
+              unrecognized.push(baseFilename);
+            } else if (!systemId) {
+              throw createError({
+                statusCode: 400,
+                statusMessage: `Assign a system to import ${baseFilename}.`,
+              });
+            } else {
+              scans.push(
+                await importScan(scan, Number(systemId), baseFilename, Number(body.BoundaryId[0])),
+              );
+            }
+          }
+
           if (dirList.findIndex((o) => o === path.dirname(fileList[j])) === -1) {
             dirList.push(path.dirname(fileList[j]));
           }
@@ -103,7 +123,7 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      return { success: true };
+      return { success: true, scans, unrecognized };
     }
   } else {
     throw createError({
@@ -112,6 +132,16 @@ export default defineEventHandler(async (event) => {
     });
   }
 });
+
+// Keeps client supplied (possibly folder relative) file names inside the temp folder
+const safeTempPath = (tempFolder: string, originalFilename: string): string => {
+  const root = path.resolve(tempFolder);
+  if (!path.resolve(root, originalFilename).startsWith(root + path.sep)) {
+    throw createError({ statusCode: 400, statusMessage: "Invalid file name." });
+  }
+  // Same form as before so the temp directory cleanup below still matches
+  return path.join(tempFolder, originalFilename);
+};
 
 const verifyXccdf = (xmlData: string): boolean => {
   const xsdData = fs.readFileSync("./lib/schema/xccdf_1.2.xsd", "utf8");
@@ -171,7 +201,8 @@ const extractLibrary = async (sourceZip: string, outputDirectory: string): Promi
       path.extname(nestedFile) === ".ckl" ||
       path.extname(nestedFile) === ".cklb" ||
       path.extname(nestedFile) === ".xml" ||
-      path.extname(nestedFile) === ".nessus"
+      path.extname(nestedFile) === ".nessus" ||
+      path.extname(nestedFile) === ".json"
     ) {
       fileList.push(filePath);
     }

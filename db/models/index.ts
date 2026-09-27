@@ -44,6 +44,10 @@ import { NessusReportItem } from "./nessusReportItem";
 import { Cve } from "./cve";
 import { CveOverride } from "./cveOverride";
 import { NessusOverride } from "./nessusOverride";
+import { ScanTool } from "./scanTool";
+import { ScanFinding } from "./scanFinding";
+import { ScanReport } from "./scanReport";
+import { ScanReportItem } from "./scanReportItem";
 import { TirNotification } from "./tirNotifications";
 import { NotificationCategory } from "./notificationCategory";
 import { StigOverride } from "./stigOverride";
@@ -381,6 +385,42 @@ EvaluationItem.hasOne(NessusPlugin_Boundary);
 NessusPlugin_Boundary.belongsTo(EvaluationItem);
 NessusPlugin_Boundary.belongsTo(Boundary);
 
+ScanTool.hasMany(ScanFinding, { onDelete: "CASCADE", onUpdate: "CASCADE" });
+ScanFinding.belongsTo(ScanTool, { onDelete: "CASCADE", onUpdate: "CASCADE" });
+
+ScanTool.hasMany(ScanReport, { onDelete: "CASCADE", onUpdate: "CASCADE" });
+ScanReport.belongsTo(ScanTool, { onDelete: "CASCADE", onUpdate: "CASCADE" });
+
+System.hasMany(ScanReport, { onDelete: "CASCADE", onUpdate: "CASCADE" });
+ScanReport.belongsTo(System, { onDelete: "CASCADE", onUpdate: "CASCADE" });
+
+ScanReport.hasMany(ScanReportItem, { onDelete: "CASCADE", onUpdate: "CASCADE" });
+ScanReportItem.belongsTo(ScanReport, { onDelete: "CASCADE", onUpdate: "CASCADE" });
+
+ScanFinding.hasMany(ScanReportItem, { onDelete: "CASCADE", onUpdate: "CASCADE" });
+ScanReportItem.belongsTo(ScanFinding, { onDelete: "CASCADE", onUpdate: "CASCADE" });
+
+export const Cve_ScanFinding = sequelize.define(
+  "Cve_ScanFinding",
+  {},
+  { timestamps: false, noIsoTimestamps: true },
+);
+ScanFinding.belongsToMany(Cve, { through: Cve_ScanFinding });
+Cve.belongsToMany(ScanFinding, { through: Cve_ScanFinding });
+
+export const ScanFinding_Boundary = sequelize.define(
+  "ScanFinding_Boundary",
+  {},
+  { timestamps: false, noIsoTimestamps: true },
+);
+Boundary.belongsToMany(ScanFinding, { through: ScanFinding_Boundary });
+ScanFinding.belongsToMany(Boundary, { through: ScanFinding_Boundary });
+ScanFinding.hasMany(ScanFinding_Boundary);
+Boundary.hasMany(ScanFinding_Boundary);
+EvaluationItem.hasOne(ScanFinding_Boundary);
+ScanFinding_Boundary.belongsTo(EvaluationItem);
+ScanFinding_Boundary.belongsTo(Boundary);
+
 export const TirNotifications_User = sequelize.define(
   "TirNotifications_User",
   {
@@ -675,4 +715,8 @@ export {
   EnhancementWithdrawn,
   ControlStatement,
   ControlEnhancementStatement,
+  ScanTool,
+  ScanFinding,
+  ScanReport,
+  ScanReportItem,
 };
